@@ -1,6 +1,13 @@
 import React, { useEffect, useRef, useState } from "react";
 import Button from "../components/Button.jsx";
 
+/**
+ * Precision Stopper
+ * - Ein Marker läuft horizontal hin und her.
+ * - Klicke oder drücke SPACE/ENTER, um zu stoppen.
+ * - Je näher an der Mitte (50%), desto mehr Punkte.
+ * - 5 Runden, steigende Geschwindigkeit. Highscore wird gespeichert.
+ */
 export default function PrecisionStopper({ onBack }) {
   const [round, setRound] = useState(1);
   const [running, setRunning] = useState(false);
@@ -44,7 +51,6 @@ export default function PrecisionStopper({ onBack }) {
       if (p < 0) { p = -p;          velRef.current *= -1; }
       posRef.current = p;
 
-      // ⚠️ direktes DOM-Update: keine teuren Re-Renders
       if (markerRef.current) {
         markerRef.current.style.left = `calc(${p * 100}% - 20px)`;
       }
@@ -104,7 +110,7 @@ export default function PrecisionStopper({ onBack }) {
         <div className="flex gap-3 items-center">
           <div className="text-sm">Runde: <b>{round}/5</b></div>
           <div className="text-sm">Score: <b>{score}</b> | Best: <b>{best}</b></div>
-          <Button variant="subtle" onClick={onBack}>Zurück</Button>
+          <Button variant="ghost" onClick={onBack}>Zurück</Button>
         </div>
       </div>
 
@@ -133,12 +139,12 @@ export default function PrecisionStopper({ onBack }) {
       </div>
 
       <div className="mt-4 flex gap-2">
-        {!running && stoppedAt == null && <Button onClick={handleStart}>Start</Button>}
-        {running && <Button variant="subtle" onClick={handleStop}>Stop</Button>}
-        {!running && stoppedAt != null && <Button onClick={handleNext}>{round >= 5 ? "Neustart" : "Nächste Runde"}</Button>}
+        {!running && stoppedAt == null && <Button onClick={handleStart} variant="primary">Start</Button>}
+        {running && <Button variant="secondary" onClick={handleStop}>Stop</Button>}
+        {!running && stoppedAt != null && <Button variant="primary" onClick={handleNext}>{round >= 5 ? "Neustart" : "Nächste Runde"}</Button>}
       </div>
 
-      <div className="mt-3 text-xs text-zinc-500">
+      <div className="mt-3 text-xs text-zinc-500 dark:text-zinc-400">
         Hinweis: Die Geschwindigkeit erhöht sich pro Runde. Perfekt (100 Punkte) gibt’s genau bei 50%.
       </div>
     </div>
