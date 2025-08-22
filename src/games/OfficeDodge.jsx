@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef, useState } from "react";
 
 function Badge({ children }) {
@@ -64,6 +63,7 @@ export default function OfficeDodge({ onBack }) {
   };
   const config = cfgMap[difficulty];
 
+  // Global: Sichtbarkeit / Esc / Pause
   useEffect(() => {
     const onVis = () => setPaused(document.hidden);
     document.addEventListener("visibilitychange", onVis);
@@ -76,64 +76,117 @@ export default function OfficeDodge({ onBack }) {
     return () => { document.removeEventListener("visibilitychange", onVis); window.removeEventListener("keydown", onKey); };
   }, [running, onBack]);
 
+  // -----------------------------
+  // Game loop (wichtig: score NICHT in deps!)
+  // -----------------------------
   useEffect(() => {
-    const canvas = canvasRef.current; const ctx = canvas.getContext("2d");
-    let anim;
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext("2d");
+    let animId;
 
     const loop = (t) => {
       if (!running) return;
-      anim = requestAnimationFrame(loop);
+      animId = requestAnimationFrame(loop);
       if (paused) return;
 
-      const dt = Math.min(32, t - (lastTime.current || t)) / 1000; lastTime.current = t; accTime.current += dt;
+      const dt = Math.min(32, t - (lastTime.current || t)) / 1000;
+      lastTime.current = t;
+      accTime.current += dt;
 
       const rect = containerRef.current.getBoundingClientRect();
-      const W = Math.floor(rect.width); const H = Math.floor(rect.height);
+      const W = Math.floor(rect.width);
+      const H = Math.floor(rect.height);
       if (canvas.width !== W || canvas.height !== H) { canvas.width = W; canvas.height = H; }
 
+      // Input
       const p = player.current; const k = keys.current;
-      const up = k["w"] || k["arrowup"]; const down = k["s"] || k["arrowdown"]; const left = k["a"] || k["arrowleft"]; const right = k["d"] || k["arrowright"]; const space = k[" "] || k["space"];
+      const up = k["w"] || k["arrowup"];
+      const down = k["s"] || k["arrowdown"];
+      const left = k["a"] || k["arrowleft"];
+      const right = k["d"] || k["arrowright"];
+      const space = k[" "] || k["space"];
 
-      const accel = config.speed; let ax = 0, ay = 0; if (up) ay -= accel; if (down) ay += accel; if (left) ax -= accel; if (right) ax += accel;
+      const accel = config.speed;
+      let ax = 0, ay = 0;
+      if (up) ay -= accel; if (down) ay += accel; if (left) ax -= accel; if (right) ax += accel;
       p.vx = ax; p.vy = ay;
 
+      // Dash
       if (p.dashCd > 0) p.dashCd -= dt;
       if (space && p.dash <= 0 && p.dashCd <= 0) {
-        const mag = Math.hypot(p.vx, p.vy) || accel; const dx = (p.vx || accel) / mag; const dy = (p.vy || 0) / mag;
-        p.vx += dx * 480; p.vy += dy * 480; p.dash = 0.15; p.dashCd = 1.2;
+        const mag = Math.hypot(p.vx, p.vy) || accel;
+        const dx = (p.vx || accel) / mag;
+        const dy = (p.vy || 0) / mag;
+        p.vx += dx * 480; p.vy += dy * 480;
+        p.dash = 0.15; p.dashCd = 1.2;
       }
       if (p.dash > 0) p.dash -= dt;
 
-      p.x = clamp(p.x + p.vx * dt, p.r, W - p.r); p.y = clamp(p.y + p.vy * dt, p.r, H - p.r);
+      // Move
+      p.x = clamp(p.x + p.vx * dt, p.r, W - p.r);
+      p.y = clamp(p.y + p.vy * dt, p.r, H - p.r);
 
+      // Spawns
       const spawnEvery = 0.9 / config.spawnRate;
       if (accTime.current > spawnEvery) {
         accTime.current = 0;
-        const edge = Math.floor(rand(0, 4)); let x = 0, y = 0, w = rand(16, 42), h = rand(16, 42), vx = 0, vy = 0; const speed = config.hazardSpeed + rand(-10, 20);
-        if (edge === 0) { x = rand(0, W - w); y = -h; vx = 0; vy = speed; } else if (edge === 1) { x = rand(0, W - w); y = H + h; vx = 0; vy = -speed; } else if (edge === 2) { x = -w; y = rand(0, H - h); vx = speed; vy = 0; } else { x = W + w; y = rand(0, H - h); vx = -speed; vy = 0; }
+        const edge = Math.floor(rand(0, 4));
+        let x = 0, y = 0, w = rand(16, 42), h = rand(16, 42), vx = 0, vy = 0;
+        const speed = config.hazardSpeed + rand(-10, 20);
+        if (edge === 0) { x = rand(0, W - w); y = -h; vy = speed; }
+        else if (edge === 1) { x = rand(0, W - w); y = H + h; vy = -speed; }
+        else if (edge === 2) { x = -w; y = rand(0, H - h); vx = speed; }
+        else { x = W + w; y = rand(0, H - h); vx = -speed; }
         hazards.current.push({ x, y, w, h, vx, vy });
-        if (Math.random() < 0.25) coffees.current.push({ x: rand(20, W - 20), y: rand(20, H - 20), r: 7, ttl: 6 });
+
+        if (Math.random() < 0.25) {
+          coffees.current.push({ x: rand(20, W - 20), y: rand(20, H - 20), r: 7, ttl: 6 });
+        }
       }
 
+      // Update
       hazards.current.forEach((hz) => { hz.x += hz.vx * dt; hz.y += hz.vy * dt; });
       hazards.current = hazards.current.filter((hz) => hz.x > -200 && hz.x < W + 200 && hz.y > -200 && hz.y < H + 200);
+
       coffees.current.forEach((c) => (c.ttl -= dt));
       coffees.current = coffees.current.filter((c) => c.ttl > 0);
 
+      // Collisions
       const collideRectCircle = (cx, cy, cr, rx, ry, rw, rh) => {
-        const testX = clamp(cx, rx, rx + rw); const testY = clamp(cy, ry, ry + rh);
+        const testX = clamp(cx, rx, rx + rw);
+        const testY = clamp(cy, ry, ry + rh);
         return (cx - testX) ** 2 + (cy - testY) ** 2 <= cr * cr;
       };
-      let hit = false; for (const hz of hazards.current) { if (collideRectCircle(p.x, p.y, p.r, hz.x, hz.y, hz.w, hz.h)) { hit = true; break; } }
 
-      let coffeePicked = false; coffees.current = coffees.current.filter((c) => { const d2 = (p.x - c.x) ** 2 + (p.y - c.y) ** 2; if (d2 <= (p.r + c.r) ** 2) { coffeePicked = true; return false; } return true; });
-      if (coffeePicked) { setScore((s) => s + 50); setMessage("Caffeine boost +50 ☕"); }
+      let hit = false;
+      for (const hz of hazards.current) {
+        if (collideRectCircle(p.x, p.y, p.r, hz.x, hz.y, hz.w, hz.h)) { hit = true; break; }
+      }
 
+      // Coffee pickup
+      let coffeePicked = false;
+      coffees.current = coffees.current.filter((c) => {
+        const d2 = (p.x - c.x) ** 2 + (p.y - c.y) ** 2;
+        if (d2 <= (p.r + c.r) ** 2) { coffeePicked = true; return false; }
+        return true;
+      });
+      if (coffeePicked) {
+        setScore((s) => s + 50);
+        setMessage("Caffeine boost +50 ☕");
+      }
+
+      // passive score
       setScore((s) => s + Math.floor(dt * 10));
 
       if (hit) {
-        setRunning(false); setPaused(false); setMessage("Oops! Hit a block. Press Restart.");
-        setBest((b) => { const nb = Math.max(b, score); localStorage.setItem("office_dodge_best", String(nb)); return nb; });
+        setRunning(false);
+        setPaused(false);
+        setMessage("Oops! Hit a block. Press Restart.");
+        setBest((b) => {
+          const nb = Math.max(b, score);
+          localStorage.setItem("office_dodge_best", String(nb));
+          return nb;
+        });
         return;
       }
 
@@ -144,21 +197,35 @@ export default function OfficeDodge({ onBack }) {
       for (let xg = 0; xg < W; xg += 24) { ctx.beginPath(); ctx.moveTo(xg, 0); ctx.lineTo(xg, H); ctx.stroke(); }
       for (let yg = 0; yg < H; yg += 24) { ctx.beginPath(); ctx.moveTo(0, yg); ctx.lineTo(W, yg); ctx.stroke(); }
 
-      ctx.fillStyle = "#ef4444"; hazards.current.forEach((hz) => { ctx.fillRect(hz.x, hz.y, hz.w, hz.h); });
-      ctx.fillStyle = "#f59e0b"; coffees.current.forEach((c) => { ctx.beginPath(); ctx.arc(c.x, c.y, c.r, 0, Math.PI * 2); ctx.fill(); });
-      ctx.fillStyle = "#22c55e"; ctx.beginPath(); ctx.arc(player.current.x, player.current.y, player.current.r, 0, Math.PI * 2); ctx.fill();
-      if (player.current.dash > 0) { ctx.globalAlpha = 0.25; ctx.fillStyle = "#86efac"; ctx.beginPath(); ctx.arc(player.current.x - player.current.vx * 0.02, player.current.y - player.current.vy * 0.02, player.current.r * 0.9, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 1; }
-      if (paused) { ctx.fillStyle = "rgba(10,10,10,0.6)"; ctx.fillRect(0, 0, W, H); ctx.fillStyle = "#e5e7eb"; ctx.font = "bold 24px Inter, ui-sans-serif"; ctx.textAlign = "center"; ctx.fillText("Paused (P)", W / 2, H / 2); }
+      ctx.fillStyle = "#ef4444";
+      hazards.current.forEach((hz) => ctx.fillRect(hz.x, hz.y, hz.w, hz.h));
+
+      ctx.fillStyle = "#f59e0b";
+      coffees.current.forEach((c) => { ctx.beginPath(); ctx.arc(c.x, c.y, c.r, 0, Math.PI * 2); ctx.fill(); });
+
+      ctx.fillStyle = "#22c55e";
+      ctx.beginPath(); ctx.arc(player.current.x, player.current.y, player.current.r, 0, Math.PI * 2); ctx.fill();
+      if (player.current.dash > 0) {
+        ctx.globalAlpha = 0.25; ctx.fillStyle = "#86efac";
+        ctx.beginPath(); ctx.arc(player.current.x - player.current.vx * 0.02, player.current.y - player.current.vy * 0.02, player.current.r * 0.9, 0, Math.PI * 2); ctx.fill();
+        ctx.globalAlpha = 1;
+      }
+      if (paused) {
+        ctx.fillStyle = "rgba(10,10,10,0.6)"; ctx.fillRect(0, 0, W, H);
+        ctx.fillStyle = "#e5e7eb"; ctx.font = "bold 24px Inter, ui-sans-serif"; ctx.textAlign = "center";
+        ctx.fillText("Paused (P)", W / 2, H / 2);
+      }
     };
 
     if (running) {
-      lastTime.current = 0; accTime.current = 0; hazards.current = []; coffees.current = [];
+      lastTime.current = 0; accTime.current = 0;
+      hazards.current = []; coffees.current = [];
       const p = player.current; p.x = 160; p.y = 200; p.vx = p.vy = 0; p.dash = 0; p.dashCd = 0;
-      requestAnimationFrame(loop);
+      animId = requestAnimationFrame(loop);
     }
 
-    return () => cancelAnimationFrame(0);
-  }, [running, paused, difficulty, score]);
+    return () => { if (animId) cancelAnimationFrame(animId); };
+  }, [running, paused, difficulty]); // <-- score absichtlich NICHT drin!
 
   const handleStart = () => { setScore(0); setMessage("Good luck!"); setRunning(true); setPaused(false); };
   const handleRestart = () => { setScore(0); setMessage("Back at it!"); setRunning(true); setPaused(false); };
