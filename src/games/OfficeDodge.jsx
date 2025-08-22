@@ -33,7 +33,9 @@ export default function OfficeDodge({ onBack }) {
   useEffect(() => {
     const down = (e) => {
       keys.current[e.key.toLowerCase()] = true;
-      if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", " "].includes(e.key)) e.preventDefault();
+      if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", " "].includes(e.key)) {
+        e.preventDefault();
+      }
     };
     const up = (e) => { keys.current[e.key.toLowerCase()] = false; };
     window.addEventListener("keydown", down, { passive: false });
@@ -53,6 +55,10 @@ export default function OfficeDodge({ onBack }) {
   const coffees = useRef([]);
   const lastTime = useRef(0);
   const accTime = useRef(0);
+
+  // 🔹 Neue Refs für performanten Score
+  const scoreRef = useRef(0);
+  const scoreSyncT = useRef(0);
 
   const cfgMap = {
     easy: { speed: 115, spawnRate: 1.0, hazardSpeed: 55 },
@@ -74,7 +80,7 @@ export default function OfficeDodge({ onBack }) {
     return () => { document.removeEventListener("visibilitychange", onVis); window.removeEventListener("keydown", onKey); };
   }, [running, onBack]);
 
-  // -------- Init nur bei Start/Restart (nicht im Effekt!) --------
+  // Init nur bei Start/Restart
   const initGame = () => {
     hazards.current = [];
     coffees.current = [];
@@ -82,9 +88,11 @@ export default function OfficeDodge({ onBack }) {
     p.x = 160; p.y = 200; p.vx = 0; p.vy = 0; p.dash = 0; p.dashCd = 0;
     lastTime.current = 0;
     accTime.current = 0;
+    scoreRef.current = 0;
+    scoreSyncT.current = 0;
   };
 
-  // ---------------- Game Loop ----------------
+  // Game loop
   useEffect(() => {
     if (!running) return;
     const canvas = canvasRef.current;
@@ -166,17 +174,24 @@ export default function OfficeDodge({ onBack }) {
         if (d2 <= (p.r + c.r) ** 2) { coffeePicked = true; return false; }
         return true;
       });
-      if (coffeePicked) { setScore((s) => s + 50); setMessage("Caffeine boost +50 ☕"); }
+      if (coffeePicked) { scoreRef.current += 50; setMessage("Caffeine boost +50 ☕"); }
 
-      // passive score
-      setScore((s) => s + Math.floor(dt * 10));
+      // Passive Score auf Ref
+      scoreRef.current += Math.floor(dt * 10);
+
+      // 🔹 State nur ca. alle 100ms syncen, um Re-Renders zu reduzieren
+      if (!scoreSyncT.current || t - scoreSyncT.current > 100) {
+        scoreSyncT.current = t;
+        setScore(scoreRef.current);
+      }
 
       if (hit) {
         setRunning(false);
         setPaused(false);
         setMessage("Oops! Hit a block. Press Restart.");
         setBest((b) => {
-          const nb = Math.max(b, score);
+          const current = scoreRef.current;
+          const nb = Math.max(b, current);
           localStorage.setItem("office_dodge_best", String(nb));
           return nb;
         });
@@ -190,7 +205,7 @@ export default function OfficeDodge({ onBack }) {
       for (let xg = 0; xg < W; xg += 24) { ctx.beginPath(); ctx.moveTo(xg, 0); ctx.lineTo(xg, H); ctx.stroke(); }
       for (let yg = 0; yg < H; yg += 24) { ctx.beginPath(); ctx.moveTo(0, yg); ctx.lineTo(W, yg); ctx.stroke(); }
 
-      ctx.fillStyle = "#ef4444"; hazards.current.forEach((hz) => ctx.fillRect(hz.x, hz.y, hz.w, hz.h));
+      ctx.fillStyle = "#ef4444"; hazards.current.forEach((hz) => { ctx.fillRect(hz.x, hz.y, hz.w, hz.h); });
       ctx.fillStyle = "#f59e0b"; coffees.current.forEach((c) => { ctx.beginPath(); ctx.arc(c.x, c.y, c.r, 0, Math.PI * 2); ctx.fill(); });
       ctx.fillStyle = "#22c55e"; ctx.beginPath(); ctx.arc(player.current.x, player.current.y, player.current.r, 0, Math.PI * 2); ctx.fill();
 
@@ -206,10 +221,9 @@ export default function OfficeDodge({ onBack }) {
       }
     };
 
-    // Start loop (ohne re-init!)
     const id = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(id);
-  }, [running, paused, difficulty]); // keine score/message Abhängigkeit
+  }, [running, paused, difficulty]); // score absichtlich NICHT in deps
 
   const handleStart = () => {
     initGame();
@@ -242,8 +256,12 @@ export default function OfficeDodge({ onBack }) {
             <option value="normal">Normal</option>
             <option value="hard">Hard</option>
           </select>
-          {!running ? <Button onClick={handleStart}>Start</Button> : <Button onClick={() => setPaused((p) => !p)} variant="subtle">{paused ? "Resume" : "Pause"}</Button>}
-          {!running ? <Button onClick={handleRestart} variant="subtle">Restart</Button> : null}
+          {!running ? (
+            <Button onClick={handleStart}>Start</Button>
+          ) : (
+            <Button onClick={() => setPaused((p) => !p)} variant="subtle">{paused ? "Resume" : "Pause"}</Button>
+          )}
+          {!running ? (<Button onClick={handleRestart} variant="subtle">Restart</Button>) : null}
           <Button variant="subtle" onClick={onBack}>Zurück</Button>
         </div>
       </div>
