@@ -1,14 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import Button from "../components/Button.jsx";
 
-function Badge({ children }) {
-  return (
-    <span className="inline-flex items-center gap-1 rounded-full bg-zinc-800 px-3 py-1 text-xs text-zinc-100 shadow">
-      {children}
-    </span>
-  );
-}
-
 function Button({ children, onClick, variant = "default" }) {
   const base =
     "rounded-2xl px-4 py-2 text-sm font-medium shadow active:translate-y-[1px] transition";
