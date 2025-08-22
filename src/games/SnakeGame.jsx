@@ -2,20 +2,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import Button from "../components/Button.jsx";
 
-function Button({ children, onClick, variant = "default" }) {
-  const base =
-    "rounded-2xl px-4 py-2 text-sm font-medium shadow active:translate-y-[1px] transition";
-  const variants = {
-    default: "bg-zinc-900 text-white hover:bg-zinc-800",
-    subtle: "bg-zinc-100 text-zinc-900 hover:bg-zinc-200",
-  };
-  return (
-    <button onClick={onClick} className={base + " " + variants[variant]}>
-      {children}
-    </button>
-  );
-}
-
 const GRID = 20; // cell size
 
 export default function SnakeGame({ onBack }) {
