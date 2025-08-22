@@ -1,17 +1,11 @@
 import React, { useEffect, useRef, useState } from "react";
 import Button from "../components/Button.jsx";
 
-function Button({ children, onClick, variant = "default" }) {
-  const base =
-    "rounded-2xl px-4 py-2 text-sm font-medium shadow active:translate-y-[1px] transition";
-  const variants = {
-    default: "bg-zinc-900 text-white hover:bg-zinc-800",
-    subtle: "bg-zinc-100 text-zinc-900 hover:bg-zinc-200",
-  };
+function Badge({ children }) {
   return (
-    <button onClick={onClick} className={base + " " + variants[variant]}>
+    <span className="inline-flex items-center gap-1 rounded-full bg-zinc-800 px-3 py-1 text-xs text-zinc-100 shadow">
       {children}
-    </button>
+    </span>
   );
 }
 
@@ -49,7 +43,7 @@ export default function OfficeDodge({ onBack }) {
   const lastTime = useRef(0);
   const accTime = useRef(0);
 
-  // 🔹 Neue Refs für performanten Score
+  // performanter Score (State-Throttle)
   const scoreRef = useRef(0);
   const scoreSyncT = useRef(0);
 
@@ -60,7 +54,6 @@ export default function OfficeDodge({ onBack }) {
   };
   const config = cfgMap[difficulty];
 
-  // Sichtbarkeit / Esc / Pause
   useEffect(() => {
     const onVis = () => setPaused(document.hidden);
     document.addEventListener("visibilitychange", onVis);
@@ -73,7 +66,6 @@ export default function OfficeDodge({ onBack }) {
     return () => { document.removeEventListener("visibilitychange", onVis); window.removeEventListener("keydown", onKey); };
   }, [running, onBack]);
 
-  // Init nur bei Start/Restart
   const initGame = () => {
     hazards.current = [];
     coffees.current = [];
@@ -85,17 +77,16 @@ export default function OfficeDodge({ onBack }) {
     scoreSyncT.current = 0;
   };
 
-  // Game loop
   useEffect(() => {
     if (!running) return;
     const canvas = canvasRef.current;
     const ctx = canvas.getContext("2d");
-    let animId;
 
     const loop = (t) => {
       if (!running) return;
-      animId = requestAnimationFrame(loop);
-      if (paused) return;
+      const id = requestAnimationFrame(loop);
+
+      if (paused) { canvas._raf = id; return; }
 
       const dt = Math.min(32, t - (lastTime.current || t)) / 1000;
       lastTime.current = t;
@@ -108,7 +99,6 @@ export default function OfficeDodge({ onBack }) {
       // Input
       const p = player.current; const k = keys.current;
       const up = k["w"] || k["arrowup"], down = k["s"] || k["arrowdown"], left = k["a"] || k["arrowleft"], right = k["d"] || k["arrowright"], space = k[" "] || k["space"];
-
       const accel = config.speed;
       let ax = 0, ay = 0; if (up) ay -= accel; if (down) ay += accel; if (left) ax -= accel; if (right) ax += accel;
       p.vx = ax; p.vy = ay;
@@ -142,25 +132,24 @@ export default function OfficeDodge({ onBack }) {
         if (Math.random() < 0.25) coffees.current.push({ x: rand(20, W - 20), y: rand(20, H - 20), r: 7, ttl: 6 });
       }
 
-      // Update & lifetime
+      // Update
       hazards.current.forEach((hz) => { hz.x += hz.vx * dt; hz.y += hz.vy * dt; });
       hazards.current = hazards.current.filter((hz) => hz.x > -200 && hz.x < W + 200 && hz.y > -200 && hz.y < H + 200);
       coffees.current.forEach((c) => (c.ttl -= dt));
       coffees.current = coffees.current.filter((c) => c.ttl > 0);
 
-      // Collision helpers
+      // Collisions
       const collideRectCircle = (cx, cy, cr, rx, ry, rw, rh) => {
         const testX = clamp(cx, rx, rx + rw), testY = clamp(cy, ry, ry + rh);
         return (cx - testX) ** 2 + (cy - testY) ** 2 <= cr * cr;
       };
 
-      // Hit by hazard?
       let hit = false;
       for (const hz of hazards.current) {
         if (collideRectCircle(p.x, p.y, p.r, hz.x, hz.y, hz.w, hz.h)) { hit = true; break; }
       }
 
-      // Coffee pickup (keine Resets!)
+      // Coffee pickup
       let coffeePicked = false;
       coffees.current = coffees.current.filter((c) => {
         const d2 = (p.x - c.x) ** 2 + (p.y - c.y) ** 2;
@@ -169,10 +158,8 @@ export default function OfficeDodge({ onBack }) {
       });
       if (coffeePicked) { scoreRef.current += 50; setMessage("Caffeine boost +50 ☕"); }
 
-      // Passive Score auf Ref
+      // Score
       scoreRef.current += Math.floor(dt * 10);
-
-      // 🔹 State nur ca. alle 100ms syncen, um Re-Renders zu reduzieren
       if (!scoreSyncT.current || t - scoreSyncT.current > 100) {
         scoreSyncT.current = t;
         setScore(scoreRef.current);
@@ -188,6 +175,7 @@ export default function OfficeDodge({ onBack }) {
           localStorage.setItem("office_dodge_best", String(nb));
           return nb;
         });
+        cancelAnimationFrame(id);
         return;
       }
 
@@ -212,11 +200,14 @@ export default function OfficeDodge({ onBack }) {
         ctx.fillStyle = "#e5e7eb"; ctx.font = "bold 24px Inter, ui-sans-serif"; ctx.textAlign = "center";
         ctx.fillText("Paused (P)", W / 2, H / 2);
       }
+
+      canvas._raf = id;
     };
 
     const id = requestAnimationFrame(loop);
-    return () => cancelAnimationFrame(id);
-  }, [running, paused, difficulty]); // score absichtlich NICHT in deps
+    canvasRef.current._raf = id;
+    return () => cancelAnimationFrame(canvasRef.current?._raf);
+  }, [running, paused, difficulty]);
 
   const handleStart = () => {
     initGame();
@@ -250,12 +241,12 @@ export default function OfficeDodge({ onBack }) {
             <option value="hard">Hard</option>
           </select>
           {!running ? (
-            <Button onClick={handleStart}>Start</Button>
+            <Button onClick={handleStart} variant="primary">Start</Button>
           ) : (
-            <Button onClick={() => setPaused((p) => !p)} variant="subtle">{paused ? "Resume" : "Pause"}</Button>
+            <Button onClick={() => setPaused((p) => !p)} variant="secondary">{paused ? "Resume" : "Pause"}</Button>
           )}
-          {!running ? (<Button onClick={handleRestart} variant="subtle">Restart</Button>) : null}
-          <Button variant="subtle" onClick={onBack}>Zurück</Button>
+          {!running ? (<Button onClick={handleRestart} variant="secondary">Restart</Button>) : null}
+          <Button variant="ghost" onClick={onBack}>Zurück</Button>
         </div>
       </div>
 
@@ -272,13 +263,13 @@ export default function OfficeDodge({ onBack }) {
             <div className="text-center text-zinc-100">
               <div className="text-3xl font-bold mb-1">Ready?</div>
               <div className="opacity-80 mb-3">Dodge red blocks, collect ☕, survive to rack up points.</div>
-              <Button onClick={handleStart}>Start Game</Button>
+              <Button onClick={handleStart} variant="primary">Start Game</Button>
             </div>
           </div>
         )}
       </div>
 
-      <div className="mt-4 text-xs text-zinc-500">Pro-Tipp: Fenster klein halten ➜ unauffälliges Zocken 😉</div>
+      <div className="mt-4 text-xs text-zinc-500 dark:text-zinc-400">Pro-Tipp: Fenster klein halten ➜ unauffälliges Zocken 😉</div>
     </div>
   );
 }
