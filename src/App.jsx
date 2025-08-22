@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import OfficeDodge from "./games/OfficeDodge.jsx";
 import SnakeGame from "./games/SnakeGame.jsx";
 import ReactionTest from "./games/ReactionTest.jsx";
@@ -6,24 +6,29 @@ import NumberMemory from "./games/NumberMemory.jsx";
 import PrecisionStopper from "./games/PrecisionStopper.jsx";
 import ClickTheOddOne from "./games/ClickTheOddOne.jsx";
 import MathRush from "./games/MathRush.jsx";
+import Button from "./components/Button.jsx";
 
-function Button({ children, onClick, variant = "default" }) {
-  const base =
-    "rounded-2xl px-4 py-2 text-sm font-medium shadow active:translate-y-[1px] transition";
-  const variants = {
-    default: "bg-zinc-900 text-white hover:bg-zinc-800",
-    subtle: "bg-zinc-100 text-zinc-900 hover:bg-zinc-200",
-  };
+function ThemeToggle() {
+  const [isDark, setIsDark] = useState(() =>
+    document.documentElement.classList.contains("dark")
+  );
+
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", isDark);
+    try {
+      localStorage.setItem("theme", isDark ? "dark" : "light");
+    } catch {}
+  }, [isDark]);
+
   return (
-    <button onClick={onClick} className={base + " " + variants[variant]}>
-      {children}
-    </button>
+    <Button variant="ghost" onClick={() => setIsDark((v) => !v)} size="sm">
+      {isDark ? "☀️ Light" : "🌙 Dark"}
+    </Button>
   );
 }
 
 export default function App() {
   const [currentGame, setCurrentGame] = useState(null);
-
   const handleBack = () => setCurrentGame(null);
 
   if (currentGame === "office") return <OfficeDodge onBack={handleBack} />;
@@ -33,13 +38,17 @@ export default function App() {
   if (currentGame === "stopper") return <PrecisionStopper onBack={handleBack} />;
   if (currentGame === "oddone") return <ClickTheOddOne onBack={handleBack} />;
   if (currentGame === "math") return <MathRush onBack={handleBack} />;
-  
+
   return (
     <div className="min-h-screen w-full max-w-3xl mx-auto p-6">
-      <h1 className="text-3xl font-bold mb-2">Mini Game Hub 🎮</h1>
-      <p className="text-sm text-zinc-600 mb-6">
+      <div className="flex items-center justify-between mb-2">
+        <h1 className="text-3xl font-bold">Mini Game Hub 🎮</h1>
+        <ThemeToggle />
+      </div>
+      <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-6">
         Unauffällige Mini-Games für die kurze Arbeitspause. Wähle ein Spiel:
       </p>
+
       <div className="grid sm:grid-cols-2 gap-4">
         <Card
           title="Office Dodge"
@@ -73,11 +82,12 @@ export default function App() {
         />
         <Card
           title="Math Rush"
-          desc="30s Kopf­rechnen: so viele Aufgaben wie möglich."
+          desc="30s Kopfrechnen: so viele Aufgaben wie möglich."
           onClick={() => setCurrentGame("math")}
         />
       </div>
-      <div className="mt-8 text-xs text-zinc-500">
+
+      <div className="mt-8 text-xs text-zinc-500 dark:text-zinc-400">
         Tipp: Fenster klein halten ➜ noch unauffälliger 😉
       </div>
     </div>
@@ -86,11 +96,11 @@ export default function App() {
 
 function Card({ title, desc, onClick }) {
   return (
-    <div className="rounded-2xl bg-white ring-1 ring-zinc-200 p-5 shadow-sm flex flex-col">
+    <div className="rounded-2xl bg-white dark:bg-zinc-900 ring-1 ring-zinc-200 dark:ring-zinc-800 p-5 shadow-sm flex flex-col text-zinc-900 dark:text-zinc-100">
       <div className="text-lg font-semibold mb-1">{title}</div>
-      <p className="text-xs text-zinc-600 mb-3">{desc}</p>
+      <p className="text-xs text-zinc-600 dark:text-zinc-400 mb-3">{desc}</p>
       <div className="mt-auto">
-        <Button onClick={onClick}>Play</Button>
+        <Button variant="primary" onClick={onClick} size="md">Play</Button>
       </div>
     </div>
   );
