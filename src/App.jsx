@@ -4,6 +4,7 @@ import SnakeGame from "./games/SnakeGame.jsx";
 import ReactionTest from "./games/ReactionTest.jsx";
 import NumberMemory from "./games/NumberMemory.jsx";
 import PrecisionStopper from "./games/PrecisionStopper.jsx";
+import ClickTheOddOne from "./games/ClickTheOddOne.jsx";
 
 function Button({ children, onClick, variant = "default" }) {
   const base =
@@ -29,6 +30,7 @@ export default function App() {
   if (currentGame === "reaction") return <ReactionTest onBack={handleBack} />;
   if (currentGame === "number") return <NumberMemory onBack={handleBack} />;
   if (currentGame === "stopper") return <PrecisionStopper onBack={handleBack} />;
+  if (currentGame === "oddone") return <ClickTheOddOne onBack={handleBack} />;
 
   return (
     <div className="min-h-screen w-full max-w-3xl mx-auto p-6">
@@ -37,18 +39,40 @@ export default function App() {
         Unauffällige Mini-Games für die kurze Arbeitspause. Wähle ein Spiel:
       </p>
       <div className="grid sm:grid-cols-2 gap-4">
-        <Card title="Office Dodge" desc="Weiche roten Blöcken aus und sammle ☕." onClick={() => setCurrentGame("office")} />
-        <Card title="Snake Classic" desc="Iss Äpfel, wachse – nicht beißen lassen!" onClick={() => setCurrentGame("snake")} />
-        <Card title="Reaction Test" desc="Klicke sobald es grün wird. Wie schnell bist du?" onClick={() => setCurrentGame("reaction")} />
-        <Card title="Number Memory" desc="Zahl merken & korrekt eintippen – wie viele Stellen schaffst du?" onClick={() => setCurrentGame("number")} />
         <Card
-  title="Precision Stopper"
-  desc="Stoppe den Marker so nah wie möglich an der Mitte."
-  onClick={() => setCurrentGame("stopper")}
-/>
-
+          title="Office Dodge"
+          desc="Weiche roten Blöcken aus und sammle ☕."
+          onClick={() => setCurrentGame("office")}
+        />
+        <Card
+          title="Snake Classic"
+          desc="Iss Äpfel, wachse – nicht beißen lassen!"
+          onClick={() => setCurrentGame("snake")}
+        />
+        <Card
+          title="Reaction Test"
+          desc="Klicke sobald es grün wird. Wie schnell bist du?"
+          onClick={() => setCurrentGame("reaction")}
+        />
+        <Card
+          title="Number Memory"
+          desc="Zahl merken & korrekt eintippen – wie viele Stellen schaffst du?"
+          onClick={() => setCurrentGame("number")}
+        />
+        <Card
+          title="Precision Stopper"
+          desc="Stoppe den Marker so nah wie möglich an der Mitte."
+          onClick={() => setCurrentGame("stopper")}
+        />
+        <Card
+          title="Click the Odd One"
+          desc="Finde das Feld mit der anderen Farbe."
+          onClick={() => setCurrentGame("oddone")}
+        />
       </div>
-      <div className="mt-8 text-xs text-zinc-500">Tipp: Fenster klein halten ➜ noch unauffälliger 😉</div>
+      <div className="mt-8 text-xs text-zinc-500">
+        Tipp: Fenster klein halten ➜ noch unauffälliger 😉
+      </div>
     </div>
   );
 }
