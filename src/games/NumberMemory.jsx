@@ -21,11 +21,9 @@ export default function NumberMemory({ onBack }) {
   // Zahl anzeigen, dann automatisch zur Eingabe wechseln
   useEffect(() => {
     if (phase !== "show") return;
-    // Anzeigezeit: Grundzeit + pro Ziffer
-    const ms = 900 + level * 450; // z. B. 1,35s bei Level 1; 2,7s bei Level 3
+    const ms = 900 + level * 450;
     const id = setTimeout(() => {
       setPhase("recall");
-      // kurze Pause, dann Fokus ins Eingabefeld
       setTimeout(() => inputRef.current?.focus(), 0);
     }, ms);
     return () => clearTimeout(id);
@@ -44,11 +42,10 @@ export default function NumberMemory({ onBack }) {
     if (ok) {
       const next = level + 1;
       setBest((b) => {
-        const nb = Math.max(b, level); // bestes abgeschlossenes Level
+        const nb = Math.max(b, level);
         localStorage.setItem("number_memory_best", String(nb));
         return nb;
       });
-      // Nächstes Level direkt starten
       setLevel(next);
       const n = makeNumber(next);
       setTarget(n);
@@ -61,7 +58,7 @@ export default function NumberMemory({ onBack }) {
 
   const retrySame = () => {
     setGuess("");
-    setPhase("show"); // gleiche level, neue Zahl
+    setPhase("show");
     setTarget(makeNumber(level));
   };
 
@@ -78,11 +75,10 @@ export default function NumberMemory({ onBack }) {
         <h2 className="text-xl font-semibold">Number Memory</h2>
         <div className="flex gap-2 items-center">
           <div className="text-sm">Level: <b>{level}</b> | Best: <b>{best}</b></div>
-          <Button variant="subtle" onClick={onBack}>Zurück</Button>
+          <Button variant="ghost" onClick={onBack}>Zurück</Button>
         </div>
       </div>
 
-      {/* Board */}
       <div className="relative aspect-[4/3] w-full rounded-3xl overflow-hidden ring-1 ring-zinc-800 shadow-lg bg-zinc-900 text-zinc-100">
         <div className="absolute inset-0 p-6 flex flex-col items-center justify-center gap-4">
           {phase === "idle" && (
@@ -111,12 +107,12 @@ export default function NumberMemory({ onBack }) {
                 inputMode="numeric"
                 className="text-zinc-900 rounded-xl px-4 py-2 text-lg w-48 text-center"
                 placeholder="Zahl hier"
-                maxLength={Math.max(24, level)} /* großzügig */
+                maxLength={Math.max(24, level)}
                 autoFocus
               />
               <div className="flex gap-2">
                 <Button type="submit">Prüfen</Button>
-                <Button variant="subtle" onClick={() => { setGuess(""); inputRef.current?.focus(); }}>Clear</Button>
+                <Button variant="secondary" onClick={() => { setGuess(""); inputRef.current?.focus(); }}>Clear</Button>
               </div>
             </form>
           )}
@@ -128,14 +124,14 @@ export default function NumberMemory({ onBack }) {
               <div className="text-sm opacity-80 mb-4">Deine Eingabe: <span className="font-mono">{guess || "—"}</span></div>
               <div className="flex flex-wrap gap-2 justify-center">
                 <Button onClick={retrySame}>Nochmal Level {level}</Button>
-                <Button variant="subtle" onClick={restartFrom1}>Von vorn (Level 1)</Button>
+                <Button variant="secondary" onClick={restartFrom1}>Von vorn (Level 1)</Button>
               </div>
             </div>
           )}
         </div>
       </div>
 
-      <div className="mt-4 text-xs text-zinc-500">
+      <div className="mt-4 text-xs text-zinc-500 dark:text-zinc-400">
         Tipp: Mit steigender Levelzahl wird die Anzeigezeit länger – aber nur ein bisschen 😉
       </div>
     </div>
