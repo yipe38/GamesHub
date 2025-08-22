@@ -16,11 +16,10 @@ export default function ClickTheOddOne({ onBack }) {
     const total = size * size;
     const odd = Math.floor(Math.random() * total);
 
-    // Basisfarbe
     const baseHue = Math.floor(Math.random() * 360);
     const baseLightness = 50;
 
-    // Unterschied: Start bei ±20%, sinkt langsam bis min ±7%
+    // Deutlicher Unterschied, sinkt langsam – min 7%
     const diff = Math.max(20 - lvl, 7);
 
     const baseColor = `hsl(${baseHue}, 70%, ${baseLightness}%)`;
@@ -68,7 +67,7 @@ export default function ClickTheOddOne({ onBack }) {
         <h2 className="text-xl font-semibold">Click the Odd One</h2>
         <div className="flex gap-3 items-center">
           <div className="text-sm">Level: <b>{level}</b> | Best: <b>{best}</b></div>
-          <Button variant="subtle" onClick={onBack}>Zurück</Button>
+          <Button variant="ghost" onClick={onBack}>Zurück</Button>
         </div>
       </div>
 
@@ -76,7 +75,7 @@ export default function ClickTheOddOne({ onBack }) {
         {!running ? (
           <div className="text-center">
             <p className="mb-3">{message}</p>
-            <Button onClick={handleRestart}>Start</Button>
+            <Button onClick={handleRestart} variant="primary">Start</Button>
           </div>
         ) : (
           <>
@@ -102,7 +101,7 @@ export default function ClickTheOddOne({ onBack }) {
         )}
       </div>
 
-      <div className="mt-4 text-xs text-zinc-500">
+      <div className="mt-4 text-xs text-zinc-500 dark:text-zinc-400">
         Tipp: Mit jedem Level wächst das Feld und die Farben ähneln sich mehr 👀
       </div>
     </div>
