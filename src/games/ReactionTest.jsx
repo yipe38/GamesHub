@@ -1,72 +1,87 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Button from "../components/Button.jsx";
 
 export default function ReactionTest({ onBack }) {
-  const [state, setState] = useState("idle"); // idle -> waiting -> go -> result/early
-  const [startTime, setStartTime] = useState(0);
+  const [phase, setPhase] = useState("idle"); // idle -> wait -> go -> result
+  const [startAt, setStartAt] = useState(0);
   const [result, setResult] = useState(null);
-  const [best, setBest] = useState(() => Number(localStorage.getItem("reaction_best") || 0));
+  const timerRef = useRef(null);
 
-  useEffect(() => {
-    const onKey = (e) => { if (e.key === "Escape") onBack(); };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onBack]);
+  useEffect(() => () => clearTimeout(timerRef.current), []);
 
-  useEffect(() => {
-    let timer;
-    if (state === "waiting") {
-      timer = setTimeout(() => { setState("go"); setStartTime(performance.now()); }, 600 + Math.random() * 1600);
-    }
-    return () => clearTimeout(timer);
-  }, [state]);
+  const start = () => {
+    setResult(null);
+    setPhase("wait");
+    // Zufällige Wartezeit 800–2000ms
+    const ms = 800 + Math.floor(Math.random() * 1200);
+    timerRef.current = setTimeout(() => {
+      setPhase("go");
+      setStartAt(performance.now());
+    }, ms);
+  };
 
-  const start = () => { setResult(null); setState("waiting"); };
-  const clickArea = () => {
-    if (state === "waiting") {
-      setState("early");
-      setResult("Zu früh! Warte auf GRÜN.");
-    } else if (state === "go") {
-      const ms = Math.round(performance.now() - startTime);
-      setResult(ms + " ms");
-      setState("result");
-      setBest((b) => {
-        const nb = b && b > 0 ? Math.min(b, ms) : ms;
-        localStorage.setItem("reaction_best", String(nb));
-        return nb;
-      });
-    } else if (state === "idle" || state === "result" || state === "early") {
-      start();
+  const handleClick = () => {
+    if (phase === "wait") {
+      // zu früh
+      clearTimeout(timerRef.current);
+      setPhase("result");
+      setResult({ ok: false, ms: 0 });
+    } else if (phase === "go") {
+      const ms = Math.round(performance.now() - startAt);
+      setPhase("result");
+      setResult({ ok: true, ms });
+      // Bestwert speichern
+      const key = "reaction_best";
+      const prev = Number(localStorage.getItem(key) || 1e9);
+      if (ms < prev) localStorage.setItem(key, String(ms));
     }
   };
 
-  const bg =
-    state === "idle" ? "bg-zinc-900" :
-    state === "waiting" ? "bg-red-600" :
-    state === "go" ? "bg-green-600" :
-    state === "early" ? "bg-yellow-600" : "bg-zinc-900";
+  const best = Number(localStorage.getItem("reaction_best") || 0);
 
   return (
     <div className="min-h-screen w-full max-w-3xl mx-auto p-6">
-      <div className="flex justify-between items-center mb-3">
+      <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl font-semibold">Reaction Test</h2>
-        <div className="flex items-center gap-2">
-          <div className="text-sm">Best: <b>{best || "-"}</b> ms</div>
-          <Button variant="subtle" onClick={onBack}>Zurück</Button>
+        <div className="flex gap-3 items-center">
+          <div className="text-sm">Best: <b>{best ? `${best} ms` : "—"}</b></div>
+          <Button variant="ghost" onClick={onBack}>Zurück</Button>
         </div>
       </div>
 
       <div
-        className={"relative aspect-[4/3] w-full rounded-3xl overflow-hidden ring-1 ring-zinc-800 shadow-lg text-zinc-100 select-none cursor-pointer " + bg}
-        onClick={clickArea}
+        className={`relative aspect-[4/3] w-full rounded-3xl overflow-hidden ring-1 ring-zinc-800 shadow-lg
+        ${phase === "go" ? "bg-emerald-500" : phase === "wait" ? "bg-zinc-800" : "bg-zinc-900"} 
+        text-zinc-100 select-none flex items-center justify-center`}
+        onClick={phase === "idle" ? undefined : handleClick}
       >
-        <div className="absolute inset-0 flex items-center justify-center">
-          {state === "idle" && <div className="text-center"><div className="text-2xl font-bold mb-2">Klicke zum Start</div><div className="text-sm opacity-80">Warte auf GRÜN und klicke so schnell du kannst.</div></div>}
-          {state === "waiting" && <div className="text-2xl font-bold">Warte...</div>}
-          {state === "go" && <div className="text-2xl font-bold">JETZT!</div>}
-          {state === "result" && <div className="text-center"><div className="text-4xl font-extrabold mb-1">{result}</div><div className="text-sm opacity-80">Klicke, um erneut zu starten.</div></div>}
-          {state === "early" && <div className="text-center"><div className="text-xl font-bold mb-1">Zu früh! 🙈</div><div className="text-sm opacity-80">Klicke, um es nochmal zu versuchen.</div></div>}
-        </div>
+        {phase === "idle" && (
+          <div className="text-center">
+            <div className="mb-2 text-sm opacity-80">Klicke so schnell wie möglich, sobald der Bildschirm <b>grün</b> wird.</div>
+            <Button onClick={start}>Start</Button>
+          </div>
+        )}
+        {phase === "wait" && (
+          <div className="text-lg opacity-80">Warte…</div>
+        )}
+        {phase === "go" && (
+          <div className="text-xl font-semibold">JETZT!</div>
+        )}
+        {phase === "result" && (
+          <div className="text-center">
+            <div className="text-xl font-bold mb-1">
+              {result?.ok ? `${result.ms} ms` : "Zu früh!"}
+            </div>
+            <div className="flex gap-2 justify-center">
+              <Button onClick={() => setPhase("idle")}>Neu</Button>
+              <Button variant="secondary" onClick={onBack}>Menü</Button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="mt-3 text-xs text-zinc-500 dark:text-zinc-400">
+        Tipp: Nicht hetzen – bei „Warte…“ ist jeder Klick zu früh 😉
       </div>
     </div>
   );
