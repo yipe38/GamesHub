@@ -4,10 +4,13 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Mini Game Hub</title>
+
+    <!-- Theme color für Light/Dark -->
     <meta name="theme-color" content="#09090b" media="(prefers-color-scheme: dark)">
     <meta name="theme-color" content="#f4f4f5" media="(prefers-color-scheme: light)">
     <link rel="icon" href="data:,">
-    <!-- Dark-Mode Klassen vor React setzen -->
+
+    <!-- Dark-Mode VOR React bootstrappen (verhindert Flackern) -->
     <script>
       (function () {
         try {
@@ -21,8 +24,15 @@
         } catch (e) {}
       })();
     </script>
-    <!-- Tailwind CDN -->
+
+    <!-- Tailwind Play CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      // WICHTIG: Dark-Mode über .dark-Klasse aktivieren
+      tailwind.config = {
+        darkMode: 'class'
+      }
+    </script>
   </head>
   <body class="bg-zinc-50 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100">
     <div id="root"></div>
