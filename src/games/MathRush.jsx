@@ -14,14 +14,13 @@ function Button({ children, onClick, variant = "default", type = "button" }) {
   );
 }
 
-// Hilfsfunktionen
+// Helpers
 const randInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
 
 function makeQuestion(score) {
-  // Schwierigkeit steigt mit Score
+  // Difficulty scales with score
   const tier = score < 5 ? 0 : score < 10 ? 1 : 2;
 
-  // Zahlenbereich
   const ranges = [
     { min: 0, max: 9 },
     { min: 0, max: 20 },
@@ -29,19 +28,16 @@ function makeQuestion(score) {
   ];
   const { min, max } = ranges[tier];
 
-  // Operatoren (× kommt ab Score 5 dazu)
   const ops = score < 5 ? ["+", "-"] : ["+", "-", "×"];
   const op = ops[randInt(0, ops.length - 1)];
+
   let a = randInt(min, max);
   let b = randInt(min, max);
 
-  // Kleine Logik für saubere Aufgaben
   if (op === "-") {
-    // kein negatives Ergebnis
-    if (b > a) [a, b] = [b, a];
+    if (b > a) [a, b] = [b, a]; // avoid negatives
   } else if (op === "×") {
-    // b kleiner halten, damit Kopf-Rechnen fair bleibt
-    b = randInt(2, score < 10 ? 9 : 12);
+    b = randInt(2, score < 10 ? 9 : 12); // keep mental math friendly
   }
 
   let answer;
@@ -59,21 +55,21 @@ export default function MathRush({ onBack }) {
   const [best, setBest] = useState(() => Number(localStorage.getItem("mathrush_best") || 0));
   const [q, setQ] = useState(() => makeQuestion(0));
   const [input, setInput] = useState("");
-  const [feedback, setFeedback] = useState(""); // kurz „✔️“ / „❌“
+  const [feedback, setFeedback] = useState(""); // „✔️“ / „❌ -2s“
   const inputRef = useRef(null);
   const timerId = useRef(null);
+  const fbTimer = useRef(null);
 
-  // Keyboard: Enter=Submit, Esc=Back
+  // Global nur ESC behandeln (Enter NICHT global, sonst Doppelsubmit!)
   useEffect(() => {
     const onKey = (e) => {
       if (e.key === "Escape") onBack?.();
-      if (e.key === "Enter") handleSubmit();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [running, input, q, score, onBack]);
+  }, [onBack]);
 
-  // Timer laufen lassen
+  // Timer
   useEffect(() => {
     if (!running) return;
     timerId.current = setInterval(() => {
@@ -81,7 +77,6 @@ export default function MathRush({ onBack }) {
         if (t <= 1) {
           clearInterval(timerId.current);
           setRunning(false);
-          // Highscore speichern
           setBest((b) => {
             const nb = Math.max(b, score);
             localStorage.setItem("mathrush_best", String(nb));
@@ -100,6 +95,7 @@ export default function MathRush({ onBack }) {
     setTimeLeft(30);
     setQ(makeQuestion(0));
     setInput("");
+    clearTimeout(fbTimer.current);
     setFeedback("");
     setRunning(true);
     setTimeout(() => inputRef.current?.focus(), 0);
@@ -111,26 +107,32 @@ export default function MathRush({ onBack }) {
     setTimeout(() => inputRef.current?.focus(), 0);
   };
 
+  const showFeedback = (text) => {
+    setFeedback(text);
+    clearTimeout(fbTimer.current);
+    fbTimer.current = setTimeout(() => setFeedback(""), 300);
+  };
+
   const handleSubmit = () => {
     if (!running) return;
-    const val = Number(input.trim());
-    if (Number.isNaN(val)) return;
+    // deutsche Eingabe: Komma -> Punkt (falls jemand 3,5 eintippt)
+    const normalized = input.replace(",", ".");
+    const val = Number(normalized.trim());
+    if (!Number.isFinite(val)) return;
+
     if (val === q.answer) {
-      setFeedback("✔️");
+      showFeedback("✔️");
       const ns = score + 1;
       setScore(ns);
       nextQuestion(ns);
     } else {
-      // kleine Zeitstrafe bei Fehler
-      setFeedback("❌ -2s");
+      showFeedback("❌ -2s");
       setTimeLeft((t) => Math.max(0, t - 2));
       nextQuestion(score);
     }
-    setTimeout(() => setFeedback(""), 300);
   };
 
   const skip = () => {
-    // Skips ohne Punkt, kleine Zeitstrafe
     setTimeLeft((t) => Math.max(0, t - 1));
     nextQuestion(score);
   };
@@ -162,7 +164,8 @@ export default function MathRush({ onBack }) {
             <div className="flex items-center gap-2">
               <input
                 ref={inputRef}
-                type="number"
+                type="text"
+                inputMode="numeric"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
