@@ -1,5 +1,5 @@
-
 import React, { useEffect, useState } from "react";
+import Button from "../components/Button.jsx";
 
 function Button({ children, onClick, variant = "default" }) {
   const base =
