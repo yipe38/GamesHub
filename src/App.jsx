@@ -5,6 +5,7 @@ import ReactionTest from "./games/ReactionTest.jsx";
 import NumberMemory from "./games/NumberMemory.jsx";
 import PrecisionStopper from "./games/PrecisionStopper.jsx";
 import ClickTheOddOne from "./games/ClickTheOddOne.jsx";
+import MathRush from "./games/MathRush.jsx";
 
 function Button({ children, onClick, variant = "default" }) {
   const base =
@@ -31,7 +32,8 @@ export default function App() {
   if (currentGame === "number") return <NumberMemory onBack={handleBack} />;
   if (currentGame === "stopper") return <PrecisionStopper onBack={handleBack} />;
   if (currentGame === "oddone") return <ClickTheOddOne onBack={handleBack} />;
-
+  if (currentGame === "math") return <MathRush onBack={handleBack} />;
+  
   return (
     <div className="min-h-screen w-full max-w-3xl mx-auto p-6">
       <h1 className="text-3xl font-bold mb-2">Mini Game Hub 🎮</h1>
@@ -68,6 +70,11 @@ export default function App() {
           title="Click the Odd One"
           desc="Finde das Feld mit der anderen Farbe."
           onClick={() => setCurrentGame("oddone")}
+        />
+        <Card
+          title="Math Rush"
+          desc="30s Kopf­rechnen: so viele Aufgaben wie möglich."
+          onClick={() => setCurrentGame("math")}
         />
       </div>
       <div className="mt-8 text-xs text-zinc-500">
