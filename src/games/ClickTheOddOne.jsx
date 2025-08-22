@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 
 function Button({ children, onClick, variant = "default", type = "button" }) {
   const base =
@@ -29,10 +29,15 @@ export default function ClickTheOddOne({ onBack }) {
     const total = size * size;
     const odd = Math.floor(Math.random() * total);
 
-    // Basisfarbe HSL, odd etwas heller/dunkler
+    // Basisfarbe
     const baseHue = Math.floor(Math.random() * 360);
-    const baseColor = `hsl(${baseHue}, 70%, 50%)`;
-    const oddColor = `hsl(${baseHue}, 70%, ${lvl > 5 ? 52 : 60}%)`;
+    const baseLightness = 50;
+
+    // Unterschied: Start bei ±20%, sinkt langsam bis min ±7%
+    const diff = Math.max(20 - lvl, 7);
+
+    const baseColor = `hsl(${baseHue}, 70%, ${baseLightness}%)`;
+    const oddColor = `hsl(${baseHue}, 70%, ${baseLightness + diff}%)`;
 
     const cells = Array.from({ length: total }, (_, i) => ({
       color: i === odd ? oddColor : baseColor,
@@ -48,7 +53,6 @@ export default function ClickTheOddOne({ onBack }) {
   const handleClick = (i) => {
     if (!running) return;
     if (i === oddIndex) {
-      // richtig → nächstes Level
       const next = level + 1;
       setMessage("Richtig ✅");
       setBest((b) => {
@@ -58,7 +62,6 @@ export default function ClickTheOddOne({ onBack }) {
       });
       setTimeout(() => startLevel(next), 700);
     } else {
-      // falsch → Game Over
       setRunning(false);
       setMessage("Falsch ❌ — Game Over!");
     }
