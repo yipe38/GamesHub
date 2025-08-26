@@ -7,6 +7,7 @@ import PrecisionStopper from "./games/PrecisionStopper.jsx";
 import ClickTheOddOne from "./games/ClickTheOddOne.jsx";
 import MathRush from "./games/MathRush.jsx";
 import Button from "./components/Button.jsx";
+import Blackjack from "./games/Blackjack.jsx";
 
 function ThemeToggle() {
   const [isDark, setIsDark] = useState(() =>
@@ -38,6 +39,7 @@ export default function App() {
   if (currentGame === "stopper") return <PrecisionStopper onBack={handleBack} />;
   if (currentGame === "oddone") return <ClickTheOddOne onBack={handleBack} />;
   if (currentGame === "math") return <MathRush onBack={handleBack} />;
+  if (currentGame === "blackjack") return <Blackjack onBack={handleBack} />;
 
   return (
     <div className="min-h-screen w-full max-w-3xl mx-auto p-6">
@@ -86,6 +88,11 @@ export default function App() {
           onClick={() => setCurrentGame("math")}
         />
       </div>
+      <Card
+        title="Blackjack (21)"
+        desc="Setz Chips, zieh Karten, schlag den Dealer."
+        onClick={() => setCurrentGame("blackjack")}
+      />
 
       <div className="mt-8 text-xs text-zinc-500 dark:text-zinc-400">
         Tipp: Fenster klein halten ➜ noch unauffälliger 😉
