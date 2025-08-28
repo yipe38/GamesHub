@@ -52,52 +52,48 @@ export default function App() {
       </p>
 
       <div className="grid sm:grid-cols-2 gap-4">
-        <Card
-          title="Office Dodge"
-          desc="Weiche roten Blöcken aus und sammle ☕."
-          onClick={() => setCurrentGame("office")}
-        />
-        <Card
-          title="Snake Classic"
-          desc="Iss Äpfel, wachse – nicht beißen lassen!"
-          onClick={() => setCurrentGame("snake")}
-        />
-        <Card
-          title="Reaction Test"
-          desc="Klicke sobald es grün wird. Wie schnell bist du?"
-          onClick={() => setCurrentGame("reaction")}
-        />
-        <Card
-          title="Number Memory"
-          desc="Zahl merken & korrekt eintippen – wie viele Stellen schaffst du?"
-          onClick={() => setCurrentGame("number")}
-        />
-        <Card
-          title="Precision Stopper"
-          desc="Stoppe den Marker so nah wie möglich an der Mitte."
-          onClick={() => setCurrentGame("stopper")}
-        />
-        <Card
-          title="Click the Odd One"
-          desc="Finde das Feld mit der anderen Farbe."
-          onClick={() => setCurrentGame("oddone")}
-        />
-        <Card
-          title="Math Rush"
-          desc="30s Kopfrechnen: so viele Aufgaben wie möglich."
-          onClick={() => setCurrentGame("math")}
-        />
-      </div>
-      <Card
-        title="Blackjack (21)"
-        desc="Setz Chips, zieh Karten, schlag den Dealer."
-        onClick={() => setCurrentGame("blackjack")}
-      />
+  <Card
+    title="Office Dodge"
+    desc="Weiche roten Blöcken aus und sammle ☕."
+    onClick={() => setCurrentGame("office")}
+  />
+  <Card
+    title="Snake Classic"
+    desc="Iss Äpfel, wachse – nicht beißen lassen!"
+    onClick={() => setCurrentGame("snake")}
+  />
+  <Card
+    title="Reaction Test"
+    desc="Klicke sobald es grün wird. Wie schnell bist du?"
+    onClick={() => setCurrentGame("reaction")}
+  />
+  <Card
+    title="Number Memory"
+    desc="Zahl merken & korrekt eintippen – wie viele Stellen schaffst du?"
+    onClick={() => setCurrentGame("number")}
+  />
+  <Card
+    title="Precision Stopper"
+    desc="Stoppe den Marker so nah wie möglich an der Mitte."
+    onClick={() => setCurrentGame("stopper")}
+  />
+  <Card
+    title="Click the Odd One"
+    desc="Finde das Feld mit der anderen Farbe."
+    onClick={() => setCurrentGame("oddone")}
+  />
+  <Card
+    title="Math Rush"
+    desc="30s Kopfrechnen: so viele Aufgaben wie möglich."
+    onClick={() => setCurrentGame("math")}
+  />
+  <Card
+    title="Blackjack (21)"
+    desc="Setz Chips, zieh Karten, schlag den Dealer."
+    onClick={() => setCurrentGame("blackjack")}
+  />
+</div>
 
-      <div className="mt-8 text-xs text-zinc-500 dark:text-zinc-400">
-        Tipp: Fenster klein halten ➜ noch unauffälliger 😉
-      </div>
-    </div>
   );
 }
 
