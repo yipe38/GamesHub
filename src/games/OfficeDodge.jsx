@@ -35,11 +35,11 @@ export default function OfficeDodge({ onBack }) {
   const [score, setScore] = useState(0);
   const [best, setBest] = useState(() => Number(localStorage.getItem("office_dodge_best") || 0));
   const [difficulty, setDifficulty] = useState("normal");
-  const [message, setMessage] = useState("Dodge the red blocks. Grab ☕ for bonus.");
+  const [message, setMessage] = useState("Dodge red blocks. Sammle ☕ / 🧋 / 🍺 für Punkte!");
 
   const player = useRef({ x: 160, y: 200, r: 10, vx: 0, vy: 0, dash: 0, dashCd: 0 });
   const hazards = useRef([]);
-  const coffees = useRef([]);
+  const items = useRef([]); // ☕ / 🧋 / 🍺
   const lastTime = useRef(0);
   const accTime = useRef(0);
 
@@ -50,7 +50,7 @@ export default function OfficeDodge({ onBack }) {
   const cfgMap = {
     easy: { speed: 115, spawnRate: 1.0, hazardSpeed: 55 },
     normal: { speed: 150, spawnRate: 1.25, hazardSpeed: 80 },
-    hard: { speed: 175, spawnRate: 1.55, hazardSpeed: 105 },
+    hard:  { speed: 175, spawnRate: 1.55, hazardSpeed: 105 },
   };
   const config = cfgMap[difficulty];
 
@@ -68,7 +68,7 @@ export default function OfficeDodge({ onBack }) {
 
   const initGame = () => {
     hazards.current = [];
-    coffees.current = [];
+    items.current = [];
     const p = player.current;
     p.x = 160; p.y = 200; p.vx = 0; p.vy = 0; p.dash = 0; p.dashCd = 0;
     lastTime.current = 0;
@@ -120,6 +120,7 @@ export default function OfficeDodge({ onBack }) {
       const spawnEvery = 0.9 / config.spawnRate;
       if (accTime.current > spawnEvery) {
         accTime.current = 0;
+        // Hazard
         const edge = Math.floor(rand(0, 4));
         let x = 0, y = 0, w = rand(16, 42), h = rand(16, 42), vx = 0, vy = 0;
         const speed = config.hazardSpeed + rand(-10, 20);
@@ -129,14 +130,29 @@ export default function OfficeDodge({ onBack }) {
         else { x = W + w; y = rand(0, H - h); vx = -speed; }
         hazards.current.push({ x, y, w, h, vx, vy });
 
-        if (Math.random() < 0.25) coffees.current.push({ x: rand(20, W - 20), y: rand(20, H - 20), r: 7, ttl: 6 });
+        // Items (☕ häufig, 🧋 mittel, 🍺 selten)
+        if (Math.random() < 0.35) { // Grundchance, dass überhaupt ein Item spawnt
+          const roll = Math.random();
+          let type = "coffee", emoji = "☕", points = 10;
+          if (roll > 0.9)        { type = "beer";   emoji = "🍺"; points = 50; } // 10% der Itemspawns
+          else if (roll > 0.6)   { type = "bubble"; emoji = "🧋"; points = 25; } // 30%
+          // sonst 60% ☕
+          items.current.push({
+            x: rand(20, W - 20),
+            y: rand(20, H - 20),
+            r: 9,
+            ttl: 6,
+            type, emoji, points,
+          });
+        }
       }
 
       // Update
       hazards.current.forEach((hz) => { hz.x += hz.vx * dt; hz.y += hz.vy * dt; });
       hazards.current = hazards.current.filter((hz) => hz.x > -200 && hz.x < W + 200 && hz.y > -200 && hz.y < H + 200);
-      coffees.current.forEach((c) => (c.ttl -= dt));
-      coffees.current = coffees.current.filter((c) => c.ttl > 0);
+
+      items.current.forEach((it) => (it.ttl -= dt));
+      items.current = items.current.filter((it) => it.ttl > 0);
 
       // Collisions
       const collideRectCircle = (cx, cy, cr, rx, ry, rw, rh) => {
@@ -149,16 +165,19 @@ export default function OfficeDodge({ onBack }) {
         if (collideRectCircle(p.x, p.y, p.r, hz.x, hz.y, hz.w, hz.h)) { hit = true; break; }
       }
 
-      // Coffee pickup
-      let coffeePicked = false;
-      coffees.current = coffees.current.filter((c) => {
-        const d2 = (p.x - c.x) ** 2 + (p.y - c.y) ** 2;
-        if (d2 <= (p.r + c.r) ** 2) { coffeePicked = true; return false; }
+      // Item pickup
+      let picked = null;
+      items.current = items.current.filter((it) => {
+        const d2 = (p.x - it.x) ** 2 + (p.y - it.y) ** 2;
+        if (d2 <= (p.r + it.r) ** 2) { picked = it; return false; }
         return true;
       });
-      if (coffeePicked) { scoreRef.current += 50; setMessage("Caffeine boost +50 ☕"); }
+      if (picked) {
+        scoreRef.current += picked.points;
+        setMessage(`${picked.emoji} +${picked.points}`);
+      }
 
-      // Score
+      // Score (passiv)
       scoreRef.current += Math.floor(dt * 10);
       if (!scoreSyncT.current || t - scoreSyncT.current > 100) {
         scoreSyncT.current = t;
@@ -182,19 +201,36 @@ export default function OfficeDodge({ onBack }) {
       // Render
       ctx.clearRect(0, 0, W, H);
       ctx.fillStyle = "#0a0a0a"; ctx.fillRect(0, 0, W, H);
+
+      // Grid
       ctx.strokeStyle = "#1f1f1f";
       for (let xg = 0; xg < W; xg += 24) { ctx.beginPath(); ctx.moveTo(xg, 0); ctx.lineTo(xg, H); ctx.stroke(); }
       for (let yg = 0; yg < H; yg += 24) { ctx.beginPath(); ctx.moveTo(0, yg); ctx.lineTo(W, yg); ctx.stroke(); }
 
-      ctx.fillStyle = "#ef4444"; hazards.current.forEach((hz) => { ctx.fillRect(hz.x, hz.y, hz.w, hz.h); });
-      ctx.fillStyle = "#f59e0b"; coffees.current.forEach((c) => { ctx.beginPath(); ctx.arc(c.x, c.y, c.r, 0, Math.PI * 2); ctx.fill(); });
-      ctx.fillStyle = "#22c55e"; ctx.beginPath(); ctx.arc(player.current.x, player.current.y, player.current.r, 0, Math.PI * 2); ctx.fill();
+      // Hazards
+      ctx.fillStyle = "#ef4444";
+      hazards.current.forEach((hz) => { ctx.fillRect(hz.x, hz.y, hz.w, hz.h); });
 
+      // Items als Emojis zeichnen
+      ctx.font = "20px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Emoji";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      items.current.forEach((it) => {
+        ctx.fillText(it.emoji, it.x, it.y);
+      });
+
+      // Player
+      ctx.fillStyle = "#22c55e";
+      ctx.beginPath(); ctx.arc(player.current.x, player.current.y, player.current.r, 0, Math.PI * 2); ctx.fill();
+
+      // Dash-Trail
       if (player.current.dash > 0) {
         ctx.globalAlpha = 0.25; ctx.fillStyle = "#86efac";
         ctx.beginPath(); ctx.arc(player.current.x - player.current.vx * 0.02, player.current.y - player.current.vy * 0.02, player.current.r * 0.9, 0, Math.PI * 2); ctx.fill();
         ctx.globalAlpha = 1;
       }
+
+      // Pause Overlay
       if (paused) {
         ctx.fillStyle = "rgba(10,10,10,0.6)"; ctx.fillRect(0, 0, W, H);
         ctx.fillStyle = "#e5e7eb"; ctx.font = "bold 24px Inter, ui-sans-serif"; ctx.textAlign = "center";
@@ -251,9 +287,18 @@ export default function OfficeDodge({ onBack }) {
       </div>
 
       <div className="grid grid-cols-3 gap-3 mb-3">
-        <div className="rounded-2xl bg-zinc-900 text-zinc-100 p-3 shadow"><div className="text-xs uppercase tracking-wide text-zinc-400">Score</div><div className="text-2xl font-bold">{score}</div></div>
-        <div className="rounded-2xl bg-zinc-900 text-zinc-100 p-3 shadow"><div className="text-xs uppercase tracking-wide text-zinc-400">Best</div><div className="text-2xl font-bold">{Math.max(best, score)}</div></div>
-        <div className="rounded-2xl bg-zinc-900 text-zinc-100 p-3 shadow"><div className="text-xs uppercase tracking-wide text-zinc-400">Status</div><div className="text-sm">{message}</div></div>
+        <div className="rounded-2xl bg-zinc-900 text-zinc-100 p-3 shadow">
+          <div className="text-xs uppercase tracking-wide text-zinc-400">Score</div>
+          <div className="text-2xl font-bold">{score}</div>
+        </div>
+        <div className="rounded-2xl bg-zinc-900 text-zinc-100 p-3 shadow">
+          <div className="text-xs uppercase tracking-wide text-zinc-400">Best</div>
+          <div className="text-2xl font-bold">{Math.max(best, score)}</div>
+        </div>
+        <div className="rounded-2xl bg-zinc-900 text-zinc-100 p-3 shadow">
+          <div className="text-xs uppercase tracking-wide text-zinc-400">Status</div>
+          <div className="text-sm">{message}</div>
+        </div>
       </div>
 
       <div ref={containerRef} className="relative aspect-[4/3] w-full rounded-3xl overflow-hidden ring-1 ring-zinc-800 shadow-lg bg-black">
@@ -262,14 +307,16 @@ export default function OfficeDodge({ onBack }) {
           <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-b from-black/30 to-black/60">
             <div className="text-center text-zinc-100">
               <div className="text-3xl font-bold mb-1">Ready?</div>
-              <div className="opacity-80 mb-3">Dodge red blocks, collect ☕, survive to rack up points.</div>
+              <div className="opacity-80 mb-3">Weiche roten Blöcken aus und sammle ☕ / 🧋 / 🍺 für Punkte.</div>
               <Button onClick={handleStart} variant="primary">Start Game</Button>
             </div>
           </div>
         )}
       </div>
 
-      <div className="mt-4 text-xs text-zinc-500 dark:text-zinc-400">Pro-Tipp: Fenster klein halten ➜ unauffälliges Zocken 😉</div>
+      <div className="mt-4 text-xs text-zinc-500 dark:text-zinc-400">
+        Punkte: ☕ = +10 (häufig) • 🧋 = +25 (mittel) • 🍺 = +50 (selten)
+      </div>
     </div>
   );
 }
